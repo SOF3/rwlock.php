@@ -31,12 +31,20 @@ final class RwLock {
 		$this->mutex = new Mutex();
 	}
 
+	public function writeClosure(Closure $closure) : Generator {
+		return $this->write($closure());
+	}
+
 	/**
 	 * Schedules a write (exclusive) operation.
 	 */
 	public function write(Generator $promise) : Generator {
 		$this->tailFxList = null;
 		yield $this->mutex->run($promise);
+	}
+
+	public function readClosure(Closure $closure) : Generator {
+		return $this->read($closure());
 	}
 
 	/**
