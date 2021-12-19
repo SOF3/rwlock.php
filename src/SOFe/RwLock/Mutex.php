@@ -19,7 +19,7 @@ use SOFe\AwaitGenerator\Await;
 final class Mutex {
 	/** @var bool */
 	private $running = false;
-	/** @var Runnable[] */
+	/** @var Runnable[] the queue of generators to run */
 	private $queue = [];
 
 	/**
@@ -30,17 +30,19 @@ final class Mutex {
 	}
 
 	public function run(Generator $promise) : Generator {
-		$resolve = yield;
+		$resolve = yield Await::RESOLVE;
 		$reject = yield Await::REJECT;
+
 		$this->queue[] = function() use($promise, $resolve, $reject) : void {
-			try {
-				$ret = $promise();
+			Await::g2c($promise, function($ret) use($resolve) {
 				$resolve($ret);
-			} catch(Throwable $e) {
-				$reject($e);
-			}
-			$this->running = false;
-			$this->next();
+				$this->running = false;
+				$this->next();
+			}, function($ex) use($reject) {
+				$reject($ex);
+				$this->running = false;
+				$this->next();
+			});
 		};
 
 		if(!$this->running) {

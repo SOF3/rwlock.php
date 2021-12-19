@@ -1,24 +1,29 @@
 {
-    "name": "sof3/rwlock",
-    "description": "Exclusive and Read-write locks for PHP",
-    "type": "library",
-		"require": {
-			"sof3/await-generator": "^3.1.0"
-		},
-    "require-dev": {
-        "phpstan/phpstan": "^0.12.84",
-        "phpunit/phpunit": "^9.5"
-    },
-    "license": "MIT",
-    "authors": [
-        {
-            "name": "SOFe",
-            "email": "sofe2038@gmail.com"
-        }
-    ],
-		"autoload": {
-			"psr-0": {
-				"SOFe\\RwLock\\": "src/"
-			}
+	"name": "sof3/rwlock",
+	"description": "Exclusive and Read-write locks for PHP",
+	"type": "library",
+	"require": {
+		"sof3/await-generator": "^3.1.0"
+	},
+	"require-dev": {
+		"phpstan/phpstan": "^1.0",
+		"phpunit/phpunit": "^9.5"
+	},
+	"license": "MIT",
+	"authors": [
+		{
+			"name": "SOFe",
+			"email": "sofe2038@gmail.com"
 		}
+	],
+	"autoload": {
+		"psr-0": {
+			"SOFe\\RwLock\\": "src/"
+		}
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"SOFe\\RwLock\\": "tests/"
+		}
+	}
 }
