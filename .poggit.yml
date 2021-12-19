@@ -1,0 +1,10 @@
+--- # Poggit-CI Manifest. Open the CI at https://poggit.pmmp.io/ci/SOF3/rwlock.php
+build-by-default: true
+branches:
+- master
+projects:
+  rwlock.php:
+    path: ""
+    model: virion
+    type: library
+...
