@@ -1,0 +1,5 @@
+name: rwlock
+version: 0.1.0
+antigen: SOFe\RwLock
+author: SOFe
+php: ["8.0"]
