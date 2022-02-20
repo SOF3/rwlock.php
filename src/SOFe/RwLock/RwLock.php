@@ -6,6 +6,8 @@ namespace SOFe\RwLock;
 
 use function assert;
 use function count;
+
+use Closure;
 use Generator;
 use Throwable;
 use SOFe\AwaitGenerator\Await;
