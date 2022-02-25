@@ -17,7 +17,6 @@ final class MutexTest extends TestCase {
 			$this->assertSame(0, $clock->now());
 			yield from $clock->sleep(2);
 			$this->assertSame(2, $clock->now());
-			echo "End 1: ", $clock->now(), "\n";
 			$done++;
 		};
 		Await::g2c($mutex->run($run1()));
