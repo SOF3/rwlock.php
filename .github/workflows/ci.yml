@@ -42,7 +42,7 @@ jobs:
           tools: composer
       - run: composer update --optimize-autoloader
       - name: phpstan analyze
-        run: vendor/bin/phpstan analyze
+        run: vendor/bin/phpstan analyze src
   infection:
     name: Mutation test
     runs-on: ubuntu-latest
