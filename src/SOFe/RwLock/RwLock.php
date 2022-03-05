@@ -4,112 +4,63 @@ declare(strict_types=1);
 
 namespace SOFe\RwLock;
 
-use function assert;
-use function count;
-
 use Closure;
 use Generator;
-use Throwable;
 use SOFe\AwaitGenerator\Await;
 
 /**
- * @phpstan-import-type AsyncRunnable from RwLock
- * @phpstan-import-type Runnable from RwLock
+ * A lock that allows shared or exclusive acquisition.
  */
 final class RwLock {
-	/** @var Mutex */
-	private $mutex;
-	/** @var int */
-	private $remaining = 0;
-	/** @var ListRef<AsyncRunnable>|null */
-	private $tailFxList = null;
-	/** @var Runnable|null */
-	private $batchDone = null;
+    private int $readerCount = 0;
+    private bool $isWriting = false;
 
-	/**
-	 * Creates a RwLock
-	 */
-	public function __construct() {
-		$this->mutex = new Mutex();
-	}
+    /**
+     * @var array<int, Closure(): void> Called when RwLock may switch ReadWrite mode.
+     */
+    private array $releasePromises = [];
+    /**
+     * @var array<int, Closure(): void> Scheduled to be moved to $releasePromises.
+     */
+    private array $newPromises = [];
 
-	public function writeClosure(Closure $closure) : Generator {
-		return $this->write($closure());
-	}
+    private function release() : void {
+        $this->releasePromises = array_merge($this->releasePromises, $this->newPromises);
+        while (($p = array_shift($this->releasePromises)) !== null) {
+            $p();
+        }
+        $this->releasePromises = array_merge($this->releasePromises, $this->newPromises);
+    }
 
-	/**
-	 * Schedules a write (exclusive) operation.
-	 */
-	public function write(Generator $promise) : Generator {
-		$this->tailFxList = null;
-		yield $this->mutex->run($promise);
-	}
+    public function readClosure(Closure $closure) : Generator {
+        return $this->read($closure());
+    }
 
-	public function readClosure(Closure $closure) : Generator {
-		return $this->read($closure());
-	}
+    public function read(Generator $generator) : Generator {
+        while ($this->isWriting) {
+            $this->newPromises[] = yield Await::RESOLVE;
+            yield Await::ONCE;
+        }
+        $this->readerCount += 1;
+        yield from $generator;
+        $this->readerCount -= 1;
+        if ($this->readerCount === 0) {
+            $this->release();
+        }
+    }
 
-	/**
-	 * Schedules a read (shared) operation.
-	 */
-	public function read(Generator $promise) : Generator {
-		$resolve = yield;
-		$reject = yield Await::REJECT;
+    public function writeClosure(Closure $closure) : Generator {
+        return $this->write($closure());
+    }
 
-		$handler = (static function() use($promise, $resolve, $reject) : Generator {
-			try {
-				$resolve(yield $promise);
-			} catch(Throwable $e) {
-				$reject($e);
-			}
-		})();
-
-		if($this->tailFxList === null) {
-			// need to schedule new batch
-			$fxList = new ListRef([$handler]);
-			$this->tailFxList = $fxList;
-			$this->mutex->runClosure(function() use($fxList) : Generator {
-				$this->batchDone = yield;
-				$this->remaining = $fxList->getCount();
-
-				foreach($fxList->getCow() as $fx) {
-					Await::f2c(function() use($fx, $fxList) {
-						yield $fx;
-
-						$this->remaining--;
-						if($this->remaining === 0) {
-							if($this->tailFxList === $fxList) {
-								$this->tailFxList = null;
-							}
-
-							assert($this->batchDone !== null, "batchDone() should be set during mutex lock by read batch");
-							($this->batchDone)();
-						}
-					});
-				}
-			});
-		} else {
-			if($this->mutex->getQueueLength() > 0) {
-				$this->tailFxList->push($handler);
-			} else {
-				$this->remaining++;
-				$fxList = $this->tailFxList;
-
-				Await::f2c(function() use($handler, $fxList) : Generator {
-					yield $handler;
-					$this->remaining--;
-					if($this->remaining === 0) {
-						if($this->tailFxList === $fxList) {
-							$this->tailFxList = null;
-						}
-
-						assert($this->batchDone !== null, "batchDone() should be set during mutex lock by read batch");
-						($this->batchDone)();
-					}
-				});
-			}
-		}
-
-		return yield Await::ONCE;
-	}
+    public function write(Generator $generator) : Generator {
+        while ($this->isWriting || $this->readerCount !== 0) {
+            $this->newPromises[] = yield Await::RESOLVE;
+            yield Await::ONCE;
+        }
+        $this->isWriting = true;
+        yield from $generator;
+        $this->isWriting = false;
+        $this->release();
+    }
 }
