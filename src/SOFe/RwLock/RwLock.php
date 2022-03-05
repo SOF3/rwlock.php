@@ -9,7 +9,7 @@ use Generator;
 use SOFe\AwaitGenerator\Await;
 
 /**
- * A Read-Write lock to be used in DB initialization
+ * A lock that allows shared or exclusive acquisition.
  */
 final class RwLock {
     private int $readerCount = 0;
