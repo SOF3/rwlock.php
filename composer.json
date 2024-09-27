@@ -25,5 +25,11 @@
 		"psr-4": {
 			"SOFe\\RwLock\\": "tests/"
 		}
-	}
+	},
+	"extra":{
+        	"virion": {
+            		"spec": "3.0",
+            		"namespace-root": "SOFe\\RwLock"
+		}
+        }
 }
